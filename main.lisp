@@ -22,7 +22,7 @@
                (if *running?*
                    (livesupport:continuable
                      (try-open-window window-name width height)
-                     (mouse-update)
+                     (update-inputs)
                      (idle)
                      (render))
                    (progn
@@ -57,6 +57,9 @@
 (defun-fps-limited *idle-fps* idle ()
   (when (functionp *idle-func*)
     (funcall *idle-func*)))
+
+(defun-fps-limited *input-fps* update-inputs ()
+  (mouse-update))
 
 (defun set-idle-func (func)
   (setf *idle-func* func))
