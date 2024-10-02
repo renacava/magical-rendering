@@ -12,7 +12,8 @@
 (defun main (&key (window-name "Magical Window")
                   (width 800)
                   (height 600)
-                  (idle-func nil))
+                  (idle-func nil)
+                  (post-startup-func nil))
   (setf *running?* t)
   (set-idle-func idle-func)
   (unless *main-thread*
@@ -23,6 +24,7 @@
                (if *running?*
                    (livesupport:continuable
                      (try-open-window window-name width height)
+                     (try-run-post-startup-func post-startup-func)
                      (update-inputs)
                      (idle)
                      (render))
@@ -34,7 +36,8 @@
 (defun exit ()
   (setf *running?* nil))
 
-(let ((window-open? nil))
+(let ((window-open? nil)
+      (gate t))
   (defun try-open-window (window-name width height)
     (unless window-open?
       (setf window-open? t)
@@ -50,7 +53,13 @@
                 (not window-open?))
       (shutdown-audio)
       (cepl:quit)
-      (setf window-open? nil))))
+      (setf window-open? nil
+            gate t)))
+
+  (defun try-run-post-startup-func (func)
+    (when (and gate (functionp func))
+      (setf gate nil)
+      (funcall func))))
 
 (defun-fps-limited *render-fps* render ()
   (update-clear-colour)
