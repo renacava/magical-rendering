@@ -10,4 +10,8 @@
    #:play-sound
    #:load-song
    #:play-song
-   #:stop-song))
+   #:stop-song
+   #:*mouse*
+   #:set-render-fps-cap
+   #:set-input-fps-cap
+   #:set-idle-fps-cap))

@@ -10,8 +10,12 @@
                #:sdl2-mixer
                #:cepl
                #:cepl.sdl2
+               #:cepl.skitter.sdl2
                #:rtg-math
                #:livesupport)
   :components ((:file "package")
+               (:file "time")
                (:file "audio")
+               (:file "keyboard")
+               (:file "mouse")
                (:file "main")))
