@@ -7,4 +7,7 @@
    #:exit
    #:set-idle-func
    #:load-sound
-   #:play-sound))
+   #:play-sound
+   #:load-song
+   #:play-song
+   #:stop-song))
