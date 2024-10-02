@@ -35,7 +35,7 @@
       (setf window-open? t)
       (cepl:repl width height)
       (setf (cepl:surface-title (cepl:current-surface)) (format nil "~a" window-name))
-      (init-audio)))
+      (try-init-audio)))
 
   (defun try-close-window ()
     (unless (or (cepl.lifecycle:shutting-down-p)
