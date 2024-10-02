@@ -1,7 +1,5 @@
 (in-package #:magical-rendering)
 
-;; (defparameter *keyboard* nil)
-;;(defparameter *keyboard-key-pressed-bindings* (make-hash-table :test #'equal))
 (defparameter *keyboard-last-event* (list :down nil
                                           :keyboard nil
                                           :button-index 0
@@ -23,19 +21,13 @@
   (decay-keyboard-inputs))
 
 (defun decay-keyboard-inputs ()
-  ;; (loop for key in *pressed-keys*
-  ;;       do (unless (find key *down-keys*)
-  ;;            (push key *down-keys*)))
   (setf *pressed-keys* nil
         *released-keys* nil))
 
 (defun on-key-event (event)
   (setf *keyboard-last-event* event)
-  
-  (update-pressed-keys (resolve-keyboard-event-bindings event) (getf event :button-id))
-  (maphash (lambda (callback-name callback-func)
-             (funcall callback-func event))
-           *keyboard-callbacks*))
+  (update-pressed-keys (resolve-keyboard-event-key event) (getf event :button-id))
+  (keyboard-call-callbacks event))
 
 (defun update-pressed-keys (event-key button-id)
   (let ((already-down? (find button-id *down-keys*))
@@ -52,7 +44,7 @@
                    (unless already-released?
                      (push button-id *released-keys*)))))))
 
-(defun resolve-keyboard-event-bindings (event)
+(defun resolve-keyboard-event-key (event)
   (let ((down? (getf event :down))
         (button-id (getf event :button-id))
         (event-key nil))
@@ -77,14 +69,15 @@
 (defun keyboard-unbind-event (event-key button-id)
   (remhash button-id (resolve-keyboard-binding-table event-key)))
 
-;; (defun keyboard-call-event (event-key button-id)
-;;   (let ((func (gethash button-id (resolve-keyboard-binding-table event-key))))
-;;     (when (functionp func)
-;;       (funcall func))))
 (defun keyboard-call-events-in-table (button-ids table)
   (loop for button-id in button-ids
         do (multiple-value-bind (result found?) (gethash button-id table)
              (when (functionp result) (funcall result)))))
+
+(defun keyboard-call-callbacks (event)
+  (maphash (lambda (callback-name callback-func)
+             (funcall callback-func event))
+           *keyboard-callbacks*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; plumbing
