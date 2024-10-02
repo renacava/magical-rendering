@@ -6,6 +6,7 @@
    #:main
    #:exit
    #:set-idle-func
+   #:set-bg-colour
    #:load-sound
    #:play-sound
    #:load-song
@@ -16,4 +17,6 @@
    #:set-input-fps-cap
    #:set-idle-fps-cap
    #:mouse-bind-event
-   #:mouse-unbind-event))
+   #:mouse-unbind-event
+   #:keyboard-bind-event
+   #:keyboard-unbind-event))

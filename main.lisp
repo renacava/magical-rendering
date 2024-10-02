@@ -6,7 +6,8 @@
 (defparameter *idle-func* nil)
 (defparameter *idle-fps* 60)
 (defparameter *render-fps* 60)
-(defparameter *input-fps* 300)
+(defparameter *input-fps* 60)
+(defparameter *bg-colour* `(0 0 0))
 
 (defun main (&key (window-name "Magical Window")
                   (width 800)
@@ -40,7 +41,8 @@
       (cepl:repl width height)
       (setf (cepl.sdl2::vsync) t)
       (setf (cepl:surface-title (cepl:current-surface)) (format nil "~a" window-name))
-      (try-init-audio)))
+      (try-init-audio)
+      (setup-keyboard)))
 
   (defun try-close-window ()
     (unless (or (cepl.lifecycle:shutting-down-p)
@@ -51,6 +53,9 @@
       (setf window-open? nil))))
 
 (defun-fps-limited *render-fps* render ()
+  (update-clear-colour)
+  (cepl:clear)
+  (cepl:swap)
   (livesupport:update-repl-link)
   (step-host))
 
@@ -59,10 +64,20 @@
     (funcall *idle-func*)))
 
 (defun-fps-limited *input-fps* update-inputs ()
+  (keyboard-call-events)
   (mouse-update))
 
 (defun set-idle-func (func)
   (setf *idle-func* func))
+
+(defun set-bg-colour (rgb)
+  (setf *bg-colour* rgb))
+
+(defun update-clear-colour ()
+  (setf (cepl:clear-color) (rtg-math:v4! (first *bg-colour*)
+                                         (second *bg-colour*)
+                                         (third *bg-colour*)
+                                         1)))
 
 (defun valid-fps? (amount)
   (when (and (numberp amount)
