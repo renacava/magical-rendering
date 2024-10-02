@@ -5,5 +5,6 @@
   (:export
    #:main
    #:exit
+   #:set-idle-func
    #:load-sound
    #:play-sound))
