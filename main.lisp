@@ -4,7 +4,11 @@
 (defparameter *main-thread-name* "magical-rendering-main-thread")
 (defparameter *main-thread* nil)
 
-(defun main (&optional idle-func)
+
+(defun main (&key (window-name "Magical Window")
+                  (width 800)
+                  (height 600)
+                  (idle-func nil))
   (setf *running?* t)
   (unless *main-thread*
     (setf *main-thread*
@@ -13,7 +17,7 @@
              (loop
                (if *running?*
                    (livesupport:continuable
-                     (try-open-window)
+                     (try-open-window window-name width height)
                     (when (functionp idle-func)
                       (funcall idle-func))
                      (funcall #'render-func))
@@ -26,10 +30,11 @@
   (setf *running?* nil))
 
 (let ((window-open? nil))
-  (defun try-open-window ()
+  (defun try-open-window (window-name width height)
     (unless window-open?
       (setf window-open? t)
-      (cepl:repl)
+      (cepl:repl width height)
+      (setf (cepl:surface-title (cepl:current-surface)) (format nil "~a" window-name))
       (init-audio)))
 
   (defun try-close-window ()
