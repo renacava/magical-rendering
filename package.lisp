@@ -18,5 +18,10 @@
    #:set-idle-fps-cap
    #:mouse-bind-event
    #:mouse-unbind-event
+   #:keyboard-bind-callback
+   #:keyboard-unbind-callback
    #:keyboard-bind-event
-   #:keyboard-unbind-event))
+   #:keyboard-unbind-event
+   #:*pressed-keys*
+   #:*down-keys*
+   #:*released-keys*))
