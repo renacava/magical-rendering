@@ -2,7 +2,7 @@
 
 (defparameter *audio-initialised?* nil)
 (defparameter *loaded-sounds* (make-hash-table :test #'equal))
-(defparameter *loaded-music* (make-hash-table :test #'equal))
+(defparameter *loaded-songs* (make-hash-table :test #'equal))
 
 (defun try-init-audio ()
   (when (and *running?*
@@ -26,9 +26,9 @@
          (maphash (lambda (key value)
                     (when value)
                     (sdl2-mixer:free-music value))
-                  *loaded-music*)
+                  *loaded-songs*)
          (clrhash *loaded-sounds*)
-         (clrhash *loaded-music*))
+         (clrhash *loaded-songs*))
     (sdl2-mixer:quit)
     (setf *audio-initialised?* nil)))
 
@@ -47,11 +47,11 @@
 
 (defun load-song (filename)
   (when *audio-initialised?*
-    (or (gethash filename *loaded-sounds*)
+    (or (gethash filename *loaded-songs*)
         (when (probe-file filename)
           (let ((sound (ignore-errors (sdl2-mixer:load-music filename))))
             (when sound
-              (setf (gethash filename *loaded-sounds*) sound)))))))
+              (setf (gethash filename *loaded-songs*) sound)))))))
 
 (defun play-song (filename &optional (loop? t))
   (when filename
@@ -60,4 +60,3 @@
 
 (defun stop-song ()
   (sdl2-mixer:halt-music))
-;; (defun load-bgm (filename))
