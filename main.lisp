@@ -13,10 +13,10 @@
              (loop
                (if *running?*
                    (livesupport:continuable
-                    (try-open-window)
+                     (try-open-window)
                     (when (functionp idle-func)
                       (funcall idle-func))
-                    (funcall #'render-func))
+                     (funcall #'render-func))
                    (progn
                      (try-close-window)
                      (sleep 0.1)))))
@@ -29,12 +29,14 @@
   (defun try-open-window ()
     (unless window-open?
       (setf window-open? t)
-      (cepl:repl)))
+      (cepl:repl)
+      (init-audio)))
 
   (defun try-close-window ()
     (unless (or (cepl.lifecycle:shutting-down-p)
                 (cepl.lifecycle:uninitialized-p)
                 (not window-open?))
+      (shutdown-audio)
       (cepl:quit)
       (setf window-open? nil))))
 
