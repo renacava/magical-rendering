@@ -34,16 +34,28 @@
           :accessor scale)
    (visible :initarg :visible
             :initform t
-            :accessor visible)))
+            :accessor visible)
+   (x-origin :initarg :x-origin
+             :initform 0.5
+             :accessor x-origin)
+   (y-origin :initarg :y-origin
+             :initform 0.5
+             :accessor y-origin)))
 
 (defun make-texture-verts (width height)
-  (let ((half-width (* 0.5 width))
-        (half-height (* 0.5 height)))
-    (list
-     (list (vec3 (- half-width) (- half-height) 0.0) (vec2 0.0 0.0))
-     (list (vec3 half-width     (- half-height) 0.0) (vec2 1.0 0.0))
-     (list (vec3 half-width     half-height     0.0) (vec2 1.0 1.0))
-     (list (vec3 (- half-width) half-height     0.0) (vec2 0.0 1.0)))))
+  ;; (let ((half-width (* 0.5 width))
+  ;;       (half-height (* 0.5 height)))
+  ;;   (list
+  ;;    (list (vec3 (- half-width) (- half-height) 0.0) (vec2 0.0 0.0))
+  ;;    (list (vec3 half-width     (- half-height) 0.0) (vec2 1.0 0.0))
+  ;;    (list (vec3 half-width     half-height     0.0) (vec2 1.0 1.0))
+  ;;    (list (vec3 (- half-width) half-height     0.0) (vec2 0.0 1.0)))
+  ;;   )
+  (list
+   (list (vec3 0.0 0.0 0.0) (vec2 0.0 0.0))
+   (list (vec3 width 0.0 0.0) (vec2 1.0 0.0))
+   (list (vec3 width height 0.0) (vec2 1.0 1.0))
+   (list (vec3 0.0 height 0.0) (vec2 0.0 1.0))))
 
 (defun make-texture (&key (width 100.0) (height 100.0) (loc (vec2 0.0 0.0)) (rot 0.0) (scale 1.0) (visible t))
   (let* ((texture-obj (make-instance 'texture-object :width (float width)
@@ -125,15 +137,24 @@
            :rot (coerce (deg-to-rad (resolve (rot texture-object))) 'single-float) 
            :scale (float (resolve (scale texture-object)))
            :ortho-matrix ortho-matrix
-           :screen-size current-screen-size)))
+           :screen-size current-screen-size
+           :origin (vec2 (float (resolve (x-origin texture-object)))
+                         (float (resolve (y-origin texture-object))))
+           :width (resolve (width texture-object))
+           :height (resolve (height texture-object)))))
 
 (defun-g texture-vert-stage ((vert :vec3) (uv :vec2) &uniform
                              (ortho-matrix :mat4)
                              (screen-size :vec2)
                              (loc :vec2)
                              (rot :float)
-                             (scale :float))
+                             (scale :float)
+                             (origin :vec2)
+                             (width :float)
+                             (height :float))
   (let* ((rot-mat4 (rtg-math.matrix4:rotation-from-euler (vec3 0f0 0f0 rot)))
+         (origin-offset (* origin (vec2 width height)))
+         (vert (- vert (vec3 origin-offset 0.0)))
          (pos (vec4 vert 0.0))
          (pos (* pos rot-mat4))
          (pos (+ pos (vec4 loc 0.0 0.0)))

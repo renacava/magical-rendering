@@ -45,4 +45,6 @@
    #:rot
    #:scale
    #:visible
+   #:x-origin
+   #:y-origin
    ))
