@@ -6,6 +6,7 @@
 (defparameter origin-matrix nil)
 (defparameter current-screen-size (vec2 1f0 1f0))
 (defparameter *all-texture-objects* (make-hash-table :test #'eq))
+;;(defparameter *)
 
 (defclass texture-object ()
   ((verts :initarg :verts
@@ -167,8 +168,13 @@
             uv)))
 
 (defun-g texture-frag-stage ((pos :vec4) (uv :vec2))
-  (values pos))
+  (values (vec4 uv 0.0 0.0)))
 
 (defpipeline-g texture-pipeline ()
   (texture-vert-stage :vec3 :vec2)
   (texture-frag-stage :vec4 :vec2))
+
+(defun load-texture-at-path (path)
+  (let ((path (probe-file path)))
+    (when path
+      (ignore-errors (opticl:convert-image-to-rgba (opticl:read-image-file path))))))

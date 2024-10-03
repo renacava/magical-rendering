@@ -11,6 +11,7 @@
                #:cepl
                #:cepl.sdl2
                #:cepl.skitter.sdl2
+               #:opticl
                #:nineveh
                #:rtg-math
                #:livesupport)
