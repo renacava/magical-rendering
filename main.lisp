@@ -36,10 +36,9 @@
     (cepl:quit)))
 
 (defun init (window-name width height)
-  (setf (cepl:depth-test-function) #'<)
-
   (cepl:repl width height)
   (gl:enable :depth-test)
+  (setf (cepl:depth-test-function) #'<)
   (set-vsync-enabled nil)
   (setf (cepl:surface-title (cepl:current-surface)) (format nil "~a" window-name))
   (defparameter *blending-params* (make-blending-params))
