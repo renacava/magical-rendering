@@ -4,10 +4,11 @@
 ;; (defparameter *main-thread-name* "magical-rendering-main-thread")
 ;; (defparameter *main-thread* nil)
 (defparameter *idle-func* nil)
-(defparameter *idle-fps* 300)
-(defparameter *render-fps* 300)
-(defparameter *input-fps* 300)
+(defparameter *idle-fps* 180)
+(defparameter *render-fps* 180)
+(defparameter *input-fps* 180)
 (defparameter *bg-colour* `(0 0 0))
+
 
 (defun main (&key (window-name "Magical Window")
                   (width 800)
@@ -31,12 +32,17 @@
               (cepl.lifecycle:uninitialized-p))
     (shutdown-audio)
     (free-all-textures)
+    (free-all-textures-at-paths)
     (cepl:quit)))
 
 (defun init (window-name width height)
+  (setf (cepl:depth-test-function) #'<)
+
   (cepl:repl width height)
+  (gl:enable :depth-test)
   (set-vsync-enabled nil)
   (setf (cepl:surface-title (cepl:current-surface)) (format nil "~a" window-name))
+  (defparameter *blending-params* (make-blending-params))
   (try-init-audio)
   (setup-keyboard))
 

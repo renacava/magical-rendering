@@ -32,8 +32,8 @@
    #:*released-keys*
 
    ;; textures
-   #:make-texture
-   #:free-texture
+   #:texture-make
+   #:texture-free
    #:free-all-textures
    #:texture-set-visible
    #:texture-hide
