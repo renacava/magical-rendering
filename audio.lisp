@@ -6,8 +6,7 @@
 (defparameter *loaded-songs* (make-hash-table :test #'equal))
 
 (defun try-init-audio ()
-  (when (and *running?*
-             (not *audio-initialised?*))
+  (when (not *audio-initialised?*)
     (setf *audio-initialised?* t)
     (sdl2-mixer:init)
     (sdl2-mixer:open-audio 22050 :s16sys *n-sound-channels* 1024)

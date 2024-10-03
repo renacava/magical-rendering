@@ -1,12 +1,12 @@
 (in-package #:magical-rendering)
 
-(defparameter *running?* nil)
-(defparameter *main-thread-name* "magical-rendering-main-thread")
-(defparameter *main-thread* nil)
+;;(defparameter *running?* nil)
+;; (defparameter *main-thread-name* "magical-rendering-main-thread")
+;; (defparameter *main-thread* nil)
 (defparameter *idle-func* nil)
-(defparameter *idle-fps* 60)
-(defparameter *render-fps* 60)
-(defparameter *input-fps* 60)
+(defparameter *idle-fps* 300)
+(defparameter *render-fps* 300)
+(defparameter *input-fps* 300)
 (defparameter *bg-colour* `(0 0 0))
 
 (defun main (&key (window-name "Magical Window")
@@ -14,63 +14,51 @@
                   (height 600)
                   (idle-func nil)
                   (post-startup-func nil))
-  (setf *running?* t)
   (set-idle-func idle-func)
-  (unless *main-thread*
-    (setf *main-thread*
-          (bt:make-thread
-           (lambda ()
-             (loop
-               (if *running?*
-                   (livesupport:continuable
-                     (try-open-window window-name width height)
-                     (try-run-post-startup-func post-startup-func)
-                     (update-inputs)
-                     (idle)
-                     (render))
-                   (progn
-                     (try-close-window)
-                     (sleep 0.1)))))
-           :name *main-thread-name*))))
+  (init window-name width height)
+  (call-if-func post-startup-func)
+  (loop
+    (livesupport:continuable
+      (livesupport:update-repl-link)
+      (when (cepl.lifecycle:uninitialized-p)
+        (return))
+      (update-inputs)
+      (render)
+      (idle))))
 
 (defun exit ()
-  (setf *running?* nil))
+  (unless (or (cepl.lifecycle:shutting-down-p)
+              (cepl.lifecycle:uninitialized-p))
+    (shutdown-audio)
+    (free-all-textures)
+    (cepl:quit)))
 
-(let ((window-open? nil)
-      (gate t))
-  (defun try-open-window (window-name width height)
-    (unless window-open?
-      (setf window-open? t)
-      (cepl:repl width height)
-      (setf (cepl.sdl2::vsync) t)
-      (setf (cepl:surface-title (cepl:current-surface)) (format nil "~a" window-name))
-      (try-init-audio)
-      (setup-keyboard)))
+(defun init (window-name width height)
+  (cepl:repl width height)
+  (set-vsync-enabled nil)
+  (setf (cepl:surface-title (cepl:current-surface)) (format nil "~a" window-name))
+  (try-init-audio)
+  (setup-keyboard))
 
-  (defun try-close-window ()
-    (unless (or (cepl.lifecycle:shutting-down-p)
-                (cepl.lifecycle:uninitialized-p)
-                (not window-open?))
-      (shutdown-audio)
-      (cepl:quit)
-      (setf window-open? nil
-            gate t)))
+(defun set-vsync-enabled (bool)
+  (setf (cepl.sdl2::vsync) bool))
 
-  (defun try-run-post-startup-func (func)
-    (when (and gate (functionp func))
-      (setf gate nil)
-      (funcall func))))
+(defun toggle-vsync ()
+  (set-vsync-enabled (not (vsync-enabled?))))
+
+(defun vsync-enabled? ()
+  (cepl.sdl2::vsync))
 
 (defun-fps-limited *render-fps* render ()
   (update-clear-colour)
   (cepl:clear)
+  (setup-ortho-matrix)
+  (render-all-textures)
   (cepl:swap)
-  (livesupport:update-repl-link)
   (step-host))
 
 (defun-fps-limited *idle-fps* idle ()
-  (when (functionp *idle-func*)
-    (funcall *idle-func*)))
+  (call-if-func *idle-func*))
 
 (defun-fps-limited *input-fps* update-inputs ()
   (keyboard-call-events)

@@ -11,9 +11,12 @@
                #:cepl
                #:cepl.sdl2
                #:cepl.skitter.sdl2
+               #:nineveh
                #:rtg-math
                #:livesupport)
   :components ((:file "package")
+               (:file "utilities")
+               (:file "texture")
                (:file "time")
                (:file "audio")
                (:file "keyboard")
