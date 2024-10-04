@@ -893,9 +893,11 @@ It works because Common Lisp passes everything by value, not by reference, excep
 
 (defun resolve (value)
   "Repeatedly funcalls the given value if its a function, until it returns something that isn't a function. If value isn't a function to begin with, then it just returns value."
-  (if (functionp value)
-      (resolve (funcall value))
-      value))
+  (if (listp value)
+      (mapcar #'resolve value)
+      (if (functionp value)
+          (resolve (funcall value))
+          value)))
 
 (defmacro resor (value &rest alternatives)
   "Returns the resolved value if not nil, else first non-nil alternative."
