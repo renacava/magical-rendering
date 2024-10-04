@@ -60,12 +60,14 @@
               (setf (gethash path *paths-sampler2d-table*)
                     (sample texture2d))))))))
 
-(defun texture-make (path &key width height (loc (vec2 0.0 0.0)) (rot 0.0) (scale 1.0) (z-order 0.0) (visible t))
+(defun texture-make (path &key width height (loc (vec2 0.0 0.0)) (rot 0.0) (scale 1.0) (z-order 0.0) (visible t) (x-origin 0.5) (y-origin 0.5))
   (let* ((texture-obj (make-instance 'texture-object
                                      :path path
                                      :loc loc
                                      :rot (lambda () (float (resolve rot)))
                                      :scale (lambda () (float (resolve scale)))
+                                     :x-origin x-origin
+                                     :y-origin y-origin
                                      :visible visible
                                      :z-order z-order))
          (loaded-texture (texture2d-at-path path)))
