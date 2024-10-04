@@ -21,3 +21,16 @@
                (progn
                  (sleep 0.0001)
                  ,prior-result)))))))
+
+(defun timeslice (func min-time-between-calls)
+  (let* ((prior-result nil)
+         (prior-time 0)
+         (current-time (get-internal-real-time))
+         (delta 1))
+    (lambda (&rest args)
+      (setf current-time (get-internal-real-time)
+            delta (- current-time prior-time))
+      (when (>= delta (* (resolve min-time-between-calls) internal-time-units-per-second))
+        (setf prior-result (apply func args)
+              prior-time current-time))
+      prior-result)))

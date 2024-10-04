@@ -11,6 +11,7 @@
    #:set-input-fps-cap
    #:set-idle-fps-cap
    #:window-get-size
+   #:timeslice
    
    ;; sound
    #:load-sound
