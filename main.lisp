@@ -32,6 +32,7 @@
               (cepl.lifecycle:uninitialized-p))
     (shutdown-audio)
     (free-loaded-texture-data)
+    (destroy-all-texture-objects)
     (cepl:quit)))
 
 (defun init (window-name width height)

@@ -3,7 +3,7 @@
 (defparameter ortho-matrix nil)
 (defparameter origin-matrix nil)
 (defparameter current-screen-size (vec2 1f0 1f0))
-(defparameter *all-texture2-objects* (make-hash-table :test #'eq))
+(defparameter *all-texture-objects* (make-hash-table :test #'eq))
 (defparameter *paths-texture2d-table* (make-hash-table :test #'equal))
 (defparameter *paths-sampler2d-table* (make-hash-table :test #'equal))
 
@@ -73,7 +73,7 @@
                            (list 100 100))))
       (setf (width texture-obj) (float (or width (first dimensions)))
             (height texture-obj) (float (or height (second dimensions))))
-      (setf (gethash texture-obj *all-texture2-objects*) texture-obj)
+      (setf (gethash texture-obj *all-texture-objects*) texture-obj)
       texture-obj)))
 
 (defun try-free (x)
@@ -88,6 +88,12 @@
 (defun free-loaded-texture-data ()
   (free-hashtable *paths-sampler2d-table*)
   (free-hashtable *paths-texture2d-table*))
+
+(defun destroy-all-texture-objects ()
+  (maphash (lambda (key texture-object)
+             (setf texture-object nil))
+           *all-texture-objects*)
+  (clrhash *all-texture-objects*))
 
 (defun setup-ortho-matrix ()
   (setf current-screen-size (cepl:surface-resolution (cepl:current-surface))
@@ -112,7 +118,7 @@
   (maphash (lambda (key texture-object)
              (with-blending *blending-params*
                (render-texture-object texture-object)))
-           *all-texture2-objects*))
+           *all-texture-objects*))
 
 (defun render-texture-object (texture-object)
   (when (and texture-object
@@ -148,16 +154,54 @@
                                               :initial-contents (loop for pixel below (third dimensions)
                                                                       collect (aref image-array row column pixel)))))))
 
-(defun texture-resize (texture-object width height)
-  )
+(defun texture-resize (texture-object &key width height)
+  (when texture-object
+    (when width
+      (setf (width texture-object) width))
+    (when height
+      (setf (height texture-object) height))))
 
-(defun texture-translate (texture-object x y))
+(defun texture-translate (texture-object xy)
+  (when texture-object
+    (setf (loc texture-object) xy)
+    texture-object))
 
-(defun texture-rotate (texture-object rotation-in-degrees))
+(defun texture-z (texture-object z-order)
+  (when texture-object
+    (setf (z-order texture-object) z-order)
+    texture-object))
 
-(defun texture-change (texture-object image-path))
+(defun texture-origin (texture-object &key x-origin y-origin)
+  (when texture-object
+    (when x-origin
+      (setf (x-origin texture-object) x-origin))
+    (when y-origin
+      (setf (y-origin texture-object) y-origin))))
 
-(defun texture-scale (texture-object scale))
+(defun texture-rotate (texture-object rotation-in-degrees)
+  (when texture-object
+    (setf (rot texture-object) rotation-in-degrees)
+    texture-object))
+
+(defun texture-scale (texture-object scale)
+  (when texture-object
+    (setf (scale texture-object) scale)
+    texture-object))
+
+(defun texture-change (texture-object image-path)
+  (when texture-object
+    (setf (path texture-object) image-path)
+    texture-object))
+
+(defun texture-properties (texture-object)
+  (list :translation (loc texture-object)
+        :rotation (rot texture-object)
+        :scale (scale texture-object)
+        :path (path texture-object)
+        :width (width texture-object)
+        :height (height texture-object)
+        :z (z-order texture-object)
+        :visible (visible texture-object)))
 
 (defun-g offset-texture-vert-by-dimensions ((vert :vec3) (width :float) (height :float))
   (let* ((vert-index (int (aref vert 2)))
@@ -196,9 +240,7 @@
             uv)))
 
 (defun-g texture-frag-stage ((pos :vec4) (uv :vec2) &uniform (sampler-2d :sampler-2d))
-  (values ;;pos
-   (texture sampler-2d uv)
-   ))
+  (values (texture sampler-2d uv)))
 
 (defpipeline-g texture-pipeline ()
   (texture-vert-stage :vec3 :vec2)

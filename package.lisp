@@ -37,4 +37,12 @@
    #:texture-hide
    #:texture-show
    #:texture-toggle-visible
+   #:texture-resize
+   #:texture-translate
+   #:texture-rotate
+   #:texture-scale
+   #:texture-change
+   #:texture-z
+   #:texture-origin
+   #:texture-properties
    ))
