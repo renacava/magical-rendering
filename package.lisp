@@ -37,11 +37,11 @@
    #:texture-hide
    #:texture-show
    #:texture-toggle-visible
-   #:texture-resize
-   #:texture-translate
+   #:texture-size
+   #:texture-translation
    #:texture-rotate
    #:texture-scale
-   #:texture-change
+   #:texture-path
    #:texture-z
    #:texture-origin
    #:texture-properties

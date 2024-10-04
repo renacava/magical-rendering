@@ -154,44 +154,68 @@
                                               :initial-contents (loop for pixel below (third dimensions)
                                                                       collect (aref image-array row column pixel)))))))
 
-(defun texture-resize (texture-object &key width height)
+(defun texture-size (texture-object &key width height)
   (when texture-object
-    (when width
-      (setf (width texture-object) width))
-    (when height
-      (setf (height texture-object) height))))
+    (if (or width height)
+        (progn
+          (when width
+            (setf (width texture-object) width))
+          (when height
+            (setf (height texture-object) height))
+          texture-object)
+        (list (width texture-object)
+              (height texture-object)))))
 
-(defun texture-translate (texture-object xy)
+(defun texture-translation (texture-object &optional xy)
   (when texture-object
-    (setf (loc texture-object) xy)
-    texture-object))
+    (if xy
+        (progn
+          (setf (loc texture-object) xy)
+          texture-object)
+        (loc texture-object))))
 
-(defun texture-z (texture-object z-order)
+(defun texture-z (texture-object &optional z-order)
   (when texture-object
-    (setf (z-order texture-object) z-order)
-    texture-object))
+    (if z-order
+        (progn
+          (setf (z-order texture-object) z-order)
+          texture-object)
+        (z-order texture-object))))
 
 (defun texture-origin (texture-object &key x-origin y-origin)
   (when texture-object
-    (when x-origin
-      (setf (x-origin texture-object) x-origin))
-    (when y-origin
-      (setf (y-origin texture-object) y-origin))))
+    (if (or x-origin y-origin)
+        (progn
+          (when x-origin
+            (setf (x-origin texture-object) x-origin))
+          (when y-origin
+            (setf (y-origin texture-object) y-origin)))
+        (list (x-origin texture-object)
+              (y-origin texture-object)))))
 
-(defun texture-rotate (texture-object rotation-in-degrees)
+(defun texture-rotate (texture-object &optional rotation-in-degrees)
   (when texture-object
-    (setf (rot texture-object) rotation-in-degrees)
-    texture-object))
+    (if rotation-in-degrees
+        (progn
+          (setf (rot texture-object) rotation-in-degrees)
+          texture-object)
+        (rot texture-object))))
 
-(defun texture-scale (texture-object scale)
+(defun texture-scale (texture-object &optional scale)
   (when texture-object
-    (setf (scale texture-object) scale)
-    texture-object))
+    (if scale
+        (progn
+          (setf (scale texture-object) scale)
+          texture-object)
+        (scale texture-object))))
 
-(defun texture-change (texture-object image-path)
+(defun texture-path (texture-object &optional image-path)
   (when texture-object
-    (setf (path texture-object) image-path)
-    texture-object))
+    (if image-path
+        (progn
+          (setf (path texture-object) image-path)
+          texture-object)
+        (path texture-object))))
 
 (defun texture-properties (texture-object)
   (list :translation (loc texture-object)
