@@ -10,6 +10,7 @@
    #:set-render-fps-cap
    #:set-input-fps-cap
    #:set-idle-fps-cap
+   #:window-get-size
    
    ;; sound
    #:load-sound
@@ -33,6 +34,7 @@
 
    ;; textures
    #:texture-make
+   #:texture-destroy
    #:texture-set-visible
    #:texture-hide
    #:texture-show

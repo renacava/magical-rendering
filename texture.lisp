@@ -2,7 +2,7 @@
 
 (defparameter ortho-matrix nil)
 (defparameter origin-matrix nil)
-(defparameter current-screen-size (vec2 1f0 1f0))
+(defparameter *current-screen-size* (vec2 1f0 1f0))
 (defparameter *all-texture-objects* (make-hash-table :test #'eq))
 (defparameter *paths-texture2d-table* (make-hash-table :test #'equal))
 (defparameter *paths-sampler2d-table* (make-hash-table :test #'equal))
@@ -71,8 +71,8 @@
          (loaded-texture (texture2d-at-path path)))
     (let* ((dimensions (or (ignore-errors (texture-base-dimensions loaded-texture))
                            (list 100 100))))
-      (setf (width texture-obj) (float (or width (first dimensions)))
-            (height texture-obj) (float (or height (second dimensions))))
+      (setf (width texture-obj) (or width (first dimensions))
+            (height texture-obj) (or height (second dimensions)))
       (setf (gethash texture-obj *all-texture-objects*) texture-obj)
       texture-obj)))
 
@@ -96,9 +96,9 @@
   (clrhash *all-texture-objects*))
 
 (defun setup-ortho-matrix ()
-  (setf current-screen-size (cepl:surface-resolution (cepl:current-surface))
-        (resolution (current-viewport)) current-screen-size 
-        ortho-matrix (rtg-math.projection:orthographic-v2 current-screen-size 0.001 100.0)))
+  (setf *current-screen-size* (cepl:surface-resolution (cepl:current-surface))
+        (resolution (current-viewport)) *current-screen-size* 
+        ortho-matrix (rtg-math.projection:orthographic-v2 *current-screen-size* 0.001 100.0)))
 
 (defun texture-set-visible (texture-object visibility)
   (when texture-object
@@ -135,7 +135,7 @@
            :rot (coerce (deg-to-rad (resolve (rot texture-object))) 'single-float) 
            :scale (float (resolve (scale texture-object)))
            :ortho-matrix ortho-matrix
-           :screen-size current-screen-size
+           :screen-size *current-screen-size*
            :origin (vec2 (float (resolve (x-origin texture-object)))
                          (float (resolve (y-origin texture-object))))
            :width (float (resolve (width texture-object)))
@@ -281,3 +281,10 @@
                                                                :element-type 'g-pt)
                                                :index-array (make-gpu-array (list 0 1 2 0 2 3) :element-type :uint))))))
 
+(defun window-get-size ()
+  (coerce *current-screen-size* 'list))
+
+(defun texture-destroy (texture-object)
+  (if (listp texture-object)
+      (mapcar #'texture-destroy texture-object)
+      (remhash texture-object *all-texture-objects*)))
