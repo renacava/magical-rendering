@@ -1,29 +1,16 @@
 (in-package #:magical-rendering)
 
-(defparameter rect-vert-indices (list 0 1 2 0 2 3))
-(defparameter default-texture-object nil)
 (defparameter ortho-matrix nil)
 (defparameter origin-matrix nil)
 (defparameter current-screen-size (vec2 1f0 1f0))
-(defparameter *all-texture-objects* (make-hash-table :test #'eq))
-(defparameter *textures-at-paths* (make-hash-table :test #'equal))
+(defparameter *all-texture2-objects* (make-hash-table :test #'eq))
+(defparameter *paths-texture2d-table* (make-hash-table :test #'equal))
+(defparameter *paths-sampler2d-table* (make-hash-table :test #'equal))
 
 (defclass texture-object ()
-  ((verts :initarg :verts
-          :initform nil
-          :accessor verts)
-   (indices :initarg :indices
-            :initform (make-gpu-array rect-vert-indices :element-type :uint)
-            :accessor indices)
-   (buffer-stream :initarg :buffer-stream
-                  :initform nil
-                  :accessor buffer-stream)
-   (path :initarg :path
+  ((path :initarg :path
          :initform nil
          :accessor path)
-   (sampler :initarg :sampler
-            :initform nil
-            :accessor sampler)
    (width :initarg :width
           :initform 100.0
           :accessor width)
@@ -52,91 +39,60 @@
              :initform 0.5
              :accessor y-origin)))
 
-(defun make-texture-verts (width height)
-  (let ((width (float width))
-        (height (float height)))
-    (list
-     (list (vec3 0.0 0.0 0.0) (vec2 0.0 1.0))
-     (list (vec3 width 0.0 0.0) (vec2 1.0 1.0))
-     (list (vec3 width height 0.0) (vec2 1.0 0.0))
-     (list (vec3 0.0 height 0.0) (vec2 0.0 0.0)))))
+(defun texture2d-at-path (path)
+  (when path
+    (multiple-value-bind (result found?) (gethash path *paths-texture2d-table*)
+      (if found?
+          result
+          (let ((path-probe (probe-file path)))
+            (when path-probe
+              (setf (gethash path *paths-texture2d-table*)
+                    (make-texture (load-image-data path-probe) :element-type :uint8-vec4))))))))
+
+
+(defun sampler2d-at-path (path)
+  (when path
+    (multiple-value-bind (result found?) (gethash path *paths-sampler2d-table*)
+      (if found?
+          result
+          (let ((texture2d (texture2d-at-path path)))
+            (when texture2d
+              (setf (gethash path *paths-sampler2d-table*)
+                    (sample texture2d))))))))
 
 (defun texture-make (path &key width height (loc (vec2 0.0 0.0)) (rot 0.0) (scale 1.0) (z-order 0.0) (visible t))
-  (let* ((texture-obj (make-instance 'texture-object ;;:width (float (or width))
-                                                     ;;:height (float (or ))
-                                                     :path path
-                                                     :loc loc
-                                                     :rot (lambda () (float (resolve rot)))
-                                                     :scale (lambda () (float (resolve scale)))
-                                                     :visible visible
-                                                     :z-order z-order
-                                                     ;;:verts nil(make-gpu-array (make-texture-verts width height) :element-type 'g-pt)
-                                                     ))
-         
-         ;;(verts-array (verts texture-obj))
-         ;;(index-array (indices texture-obj))
-         (cepl-texture (load-texture-at-path path)))
-    (when cepl-texture
-      (let* ((dimensions (texture-base-dimensions cepl-texture))
-             (width (float (or width (first dimensions))))
-             (height (float (or height (second dimensions))))
-             (verts-array (make-gpu-array (make-texture-verts width height) :element-type 'g-pt))
-             (index-array (indices texture-obj)))
-        (setf (sampler texture-obj) (sample cepl-texture)
-              (width texture-obj) width
-              (height texture-obj) height
-              (verts texture-obj) verts-array)
-        (setf (buffer-stream texture-obj) (make-buffer-stream verts-array :index-array index-array))
-        (setf (gethash texture-obj *all-texture-objects*) texture-obj)
-        texture-obj)
-)
-))
-
-(defun free-all-textures ()
-  (maphash (lambda (key texture-object)
-             (texture-free texture-object))
-           *all-texture-objects*))
-
-(defun texture-free (texture-object)
-  (when texture-object
-    (ignore-errors (try-free-objects (buffer-stream texture-object)
-                                     (indices texture-object)
-                                     (verts texture-object)
-                                     (sampler texture-object)))
-    (setf (buffer-stream texture-object) nil
-          (indices texture-object) nil
-          (verts texture-object) nil
-          (sampler texture-object) nil)
-    (remhash texture-object *all-texture-objects*)))
-
-(defun free-all-textures-at-paths ()
-  (maphash (lambda (path texture)
-             (ignore-errors (try-free texture)))
-           *textures-at-paths*)
-  (clrhash *textures-at-paths*))
+  (let* ((texture-obj (make-instance 'texture-object
+                                     :path path
+                                     :loc loc
+                                     :rot (lambda () (float (resolve rot)))
+                                     :scale (lambda () (float (resolve scale)))
+                                     :visible visible
+                                     :z-order z-order))
+         (loaded-texture (texture2d-at-path path)))
+    (let* ((dimensions (or (ignore-errors (texture-base-dimensions loaded-texture))
+                           (list 100 100))))
+      (setf (width texture-obj) (float (or width (first dimensions)))
+            (height texture-obj) (float (or height (second dimensions))))
+      (setf (gethash texture-obj *all-texture2-objects*) texture-obj)
+      texture-obj)))
 
 (defun try-free (x)
-  (when x
-    (free x)))
+  (ignore-errors (free x)))
 
-(defun try-free-objects (&rest objects)
-  (mapcar #'try-free objects))
+(defun free-hashtable (table)
+  (maphash (lambda (key value)
+             (try-free value))
+           table)
+  (clrhash table))
+
+(defun free-loaded-texture-data ()
+  (free-hashtable *paths-sampler2d-table*)
+  (free-hashtable *paths-texture2d-table*))
 
 (defun setup-ortho-matrix ()
-  (let ((res (cepl:surface-resolution (cepl:current-surface))))
-    (setf (resolution (current-viewport)) res 
-          current-screen-size res)
-    (let* ((res-vec2 res)
-           (origin-offset-mat4 (rtg-math.matrix4:translation (vec3 (* -0.5 (aref res-vec2 0))
-                                                                   (* -0.5 (aref res-vec2 1))
-                                                                   0.0)))
-           
-           (ortho-mat4 (rtg-math.projection:orthographic-v2 res-vec2 0.001 100.0)))
-      
-      (setf ortho-matrix ortho-mat4
-            origin-matrix origin-offset-mat4)))
-  
-  )
+  (setf current-screen-size (cepl:surface-resolution (cepl:current-surface))
+        (resolution (current-viewport)) current-screen-size 
+        ortho-matrix (rtg-math.projection:orthographic-v2 current-screen-size 0.001 100.0)))
 
 (defun texture-set-visible (texture-object visibility)
   (when texture-object
@@ -156,13 +112,13 @@
   (maphash (lambda (key texture-object)
              (with-blending *blending-params*
                (render-texture-object texture-object)))
-           *all-texture-objects*))
+           *all-texture2-objects*))
 
 (defun render-texture-object (texture-object)
   (when (and texture-object
              (resolve (visible texture-object))
-             (buffer-stream texture-object))
-    (map-g #'texture-pipeline (buffer-stream texture-object)
+             )
+    (map-g #'texture-pipeline (texture-default-verts-stream)
            :loc (let ((loc (resolve (loc texture-object))))
                   (if (listp loc)
                       (vec2 (float (first loc)) (float (second loc)))
@@ -178,7 +134,40 @@
                          (float (resolve (y-origin texture-object))))
            :width (float (resolve (width texture-object)))
            :height (float (resolve (height texture-object)))
-           :sampler-2d (sampler texture-object))))
+           :sampler-2d (sampler2d-at-path (resolve (path texture-object))))))
+
+(defun load-image-data (path)
+  (flatten-image-array (opticl:convert-image-to-rgba (opticl:read-image-file path))))
+
+(defun flatten-image-array (image-array)
+  "Returns a flat vector based on the 3 dimensional image-array"
+  (let ((dimensions (array-dimensions image-array)))
+    (loop for row below (first dimensions)
+          collect (loop for column below (second dimensions)
+                        collect (make-array 4 :element-type `(unsigned-byte 8)
+                                              :initial-contents (loop for pixel below (third dimensions)
+                                                                      collect (aref image-array row column pixel)))))))
+
+(defun texture-resize (texture-object width height)
+  )
+
+(defun texture-translate (texture-object x y))
+
+(defun texture-rotate (texture-object rotation-in-degrees))
+
+(defun texture-change (texture-object image-path))
+
+(defun texture-scale (texture-object scale))
+
+(defun-g offset-texture-vert-by-dimensions ((vert :vec3) (width :float) (height :float))
+  (let* ((vert-index (int (aref vert 2)))
+         (offset (vec2 0.0 0.0)))
+    (if (= vert-index 1)
+        (setf offset (vec2 width 0.0))
+        (if (= vert-index 2)
+            (setf offset (vec2 width height))
+            (if (= vert-index 3) (setf offset (vec2 0.0 height)))))
+    (vec3 offset 0.0)))
 
 (defun-g texture-vert-stage ((vert :vec3) (uv :vec2) &uniform
                              (z :float)
@@ -192,19 +181,14 @@
                              (height :float))
   (let* ((rot-mat4 (rtg-math.matrix4:rotation-from-euler (vec3 0f0 0f0 rot)))
          (origin-offset (* origin (vec2 width height)))
-         ;;(vert (vec3 (aref vert 0) (aref vert 1) z))
+         (vert (offset-texture-vert-by-dimensions vert width height))
          (vert (- vert (vec3 origin-offset 0.0)))
          (pos (vec4 vert 0.0))
          (pos (* pos scale))
          (pos (* pos rot-mat4))
          (pos (+ pos (vec4 loc 0.0 0.0)))
-
          (pos (vec4 (aref pos 0) (aref pos 1) -1.0 1.0))
-         
          (pos (+ pos (vec4 (* screen-size -0.5) 0.0 0.0)))
-         
-         ;;(pos ())
-         
          (pos (* ortho-matrix pos))
          (pos (- pos (vec4 0.0 0.0 (* z 0.01) 0.0))))
     (values pos 
@@ -213,35 +197,21 @@
 
 (defun-g texture-frag-stage ((pos :vec4) (uv :vec2) &uniform (sampler-2d :sampler-2d))
   (values ;;pos
-          (texture sampler-2d uv)
+   (texture sampler-2d uv)
    ))
 
 (defpipeline-g texture-pipeline ()
   (texture-vert-stage :vec3 :vec2)
   (texture-frag-stage :vec4 :vec2))
 
-(defun load-texture-at-path (path &optional force-reload?)
-  (unless path
-    (return-from load-texture-at-path))
-  (when force-reload?
-    (try-free (gethash path *textures-at-paths*))
-    (remhash path *textures-at-paths*))
-  (multiple-value-bind (result found?) (gethash path *textures-at-paths*)
-    (if found?
-        result
-        (let ((path-probe (probe-file path)))
-          (when path-probe
-            (setf (gethash path *textures-at-paths*)
-                  (ignore-errors (make-texture (load-image-data path-probe) :element-type :uint8-vec4))))))))
+(let (verts-stream)
+  (defun texture-default-verts-stream ()
+    (or verts-stream
+        (setf verts-stream (make-buffer-stream (make-gpu-array (list
+                                                                (list (vec3 0.0 0.0 0.0) (vec2 0.0 1.0))
+                                                                (list (vec3 1.0 0.0 1.0) (vec2 1.0 1.0))
+                                                                (list (vec3 1.0 1.0 2.0) (vec2 1.0 0.0))
+                                                                (list (vec3 0.0 1.0 3.0) (vec2 0.0 0.0)))
+                                                               :element-type 'g-pt)
+                                               :index-array (make-gpu-array (list 0 1 2 0 2 3) :element-type :uint))))))
 
-(defun load-image-data (path)
-  (flatten-image-array (opticl:convert-image-to-rgba (opticl:read-image-file path))))
-
-(defun flatten-image-array (image-array)
-  "Returns a flat vector based on the 3 dimensional image-array"
-  (let ((dimensions (array-dimensions image-array)))
-    (loop for row below (first dimensions)
-          collect (loop for column below (second dimensions)
-                       collect (make-array 4 :element-type `(unsigned-byte 8)
-                                             :initial-contents (loop for pixel below (third dimensions)
-                                                                     collect (aref image-array row column pixel)))))))

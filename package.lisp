@@ -33,18 +33,8 @@
 
    ;; textures
    #:texture-make
-   #:texture-free
-   #:free-all-textures
    #:texture-set-visible
    #:texture-hide
    #:texture-show
    #:texture-toggle-visible
-   #:width
-   #:height
-   #:loc
-   #:rot
-   #:scale
-   #:visible
-   #:x-origin
-   #:y-origin
    ))

@@ -31,8 +31,7 @@
   (unless (or (cepl.lifecycle:shutting-down-p)
               (cepl.lifecycle:uninitialized-p))
     (shutdown-audio)
-    (free-all-textures)
-    (free-all-textures-at-paths)
+    (free-loaded-texture-data)
     (cepl:quit)))
 
 (defun init (window-name width height)
