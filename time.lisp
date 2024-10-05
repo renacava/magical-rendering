@@ -22,6 +22,9 @@
                  (sleep 0.0001)
                  ,prior-result)))))))
 
+(defun now ()
+  (float (/ (get-internal-real-time) internal-time-units-per-second)))
+
 (defun timeslice (func min-time-between-calls)
   (let* ((prior-result nil)
          (prior-time 0)

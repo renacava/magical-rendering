@@ -6,8 +6,30 @@
 (defun scan-fonts-folder ()
   (files-of-type-in-directory (asdf:system-relative-pathname :magical-rendering "fonts/") "ttf"))
 
+;; (defmacro with-font ((var-name path &optional (point-size 10)) &body body)
+;;   `(let ((,var-name (sdl2-ttf:open-font ,path ,point-size)))
+;;      (unwind-protect (progn ,@body)
+;;        (sdl2-ttf:close-font ,var-name))))
+
+
+
+(defun font-load (path point-size)
+  (let ((path (resolve path))
+        (point-size (resolve point-size)))
+    (when (and path point-size)
+      (multiple-value-bind (result found?) (gethash (list path point-size) *loaded-fonts*)
+        (if found?
+            result
+            (let ((loaded-font (ignore-errors (sdl2-ttf:open-font path point-size))))
+              (if loaded-font
+                  (setf (gethash (list path point-size) *loaded-fonts*) loaded-font)
+                  (font-load *default-font-filepath* point-size)
+                  ;;(gethash *default-font-filepath* *loaded-fonts*)
+                  )))))))
+
 (progn
   ;;(defparameter default-font-struct nil)
+  (defparameter *loaded-fonts* (make-hash-table :test #'equal))
   (defparameter *strings-texture2d-table* (make-hash-table :test #'equalp))
   (defparameter *strings-sampler2d-table* (make-hash-table :test #'equalp))
   (defparameter *all-text-objects* (make-hash-table :test #'eq))
@@ -37,12 +59,19 @@
                     (sample texture2d))))))))
 
 (defun texture2d-from-string (str &optional (quality 'low) (font-filepath *default-font-filepath*))
-  (cepl.sdl2-ttf:with-font (font font-filepath (case quality
-                                                            (low 48)
-                                                            (medium 128)
-                                                            (high 256)
-                                                            (t 48))) 
+  (let ((font (font-load font-filepath (quality-symbol-to-point-size quality))))
+    (when font)
     (text-to-tex (format nil "~a" (resolve str)) font)))
+
+(defun quality-symbol-to-point-size (quality)
+  (let ((quality (resolve quality)))
+    (case quality
+      (low 16)
+      (medium 72)
+      (high 256)
+      (t (if (numberp quality)
+             (bound-number quality 1 300)
+             48)))))
 
 (defclass text-object ()
   ((text-string :initarg :text-string
@@ -192,7 +221,11 @@
 
 (defun free-all-text-data ()
   (free-hashtable *strings-sampler2d-table*)
-  (free-hashtable *strings-texture2d-table*))
+  (free-hashtable *strings-texture2d-table*)
+  (maphash (lambda (key font-struct)
+             (sdl2-ttf:close-font font-struct))
+           *loaded-fonts*)
+  (clrhash *loaded-fonts*))
 
 (defun text-to-tex (text font &optional (color (v! 255 255 255 0)))
   (let* ((texture-surface (sdl2:convert-surface-format (sdl2-ttf:render-utf8-blended
