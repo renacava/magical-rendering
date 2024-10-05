@@ -8,9 +8,11 @@
   :serial t
   :depends-on (#:sdl2
                #:sdl2-mixer
+               #:sdl2-ttf
                #:cepl
                #:cepl.sdl2
                #:cepl.skitter.sdl2
+               #:cepl.sdl2-ttf
                #:opticl
                #:nineveh
                #:rtg-math
@@ -18,6 +20,7 @@
   :components ((:file "package")
                (:file "utilities")
                (:file "texture")
+               (:file "text")
                (:file "time")
                (:file "audio")
                (:file "keyboard")

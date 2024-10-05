@@ -9,7 +9,6 @@
 (defparameter *input-fps* 180)
 (defparameter *bg-colour* `(0 0 0))
 
-
 (defun main (&key (window-name "Magical Window")
                   (width 800)
                   (height 600)
@@ -33,6 +32,10 @@
     (shutdown-audio)
     (free-loaded-texture-data)
     (destroy-all-texture-objects)
+    (destroy-all-text-objects)
+    (free-all-text-data)
+    ;;(sdl2-ttf:close-font default-font-struct)
+    (cepl.sdl2-ttf:quit-cepl-sdl2-ttf)
     (cepl:quit)))
 
 (defun init (window-name width height)
@@ -43,7 +46,10 @@
   (setf (cepl:surface-title (cepl:current-surface)) (format nil "~a" window-name))
   (defparameter *blending-params* (make-blending-params))
   (try-init-audio)
-  (setup-keyboard))
+  (setup-keyboard)
+  (sdl2-ttf:init)
+  (text-init)
+  (defparameter title-text (text-make "Magical Rendering" :loc #'window-center :quality 'high :font-filepath (probe-file (asdf:system-relative-pathname :magical-rendering (font-find "inconsolata-sugar-bold-italic.ttf"))))))
 
 (defun set-vsync-enabled (bool)
   (setf (cepl.sdl2::vsync) bool))
@@ -57,8 +63,11 @@
 (defun-fps-limited *render-fps* render ()
   (update-clear-colour)
   (cepl:clear)
+  (gl:enable :blend)
+  (gl:blend-func :src-alpha :one-minus-src-alpha)
   (setup-ortho-matrix)
   (render-all-textures)
+  (render-all-texts)
   (cepl:swap)
   (step-host))
 

@@ -286,6 +286,18 @@
 (defun window-get-size ()
   (coerce *current-screen-size* 'list))
 
+(defun window-center ()
+  (list (half (aref *current-screen-size* 0))
+        (half (aref *current-screen-size* 1))))
+
+(defun window-width ()
+  (aref *current-screen-size* 0))
+
+(defun window-height ()
+  (aref *current-screen-size* 1))
+
+
+
 (defun texture-destroy (texture-object)
   (if (listp texture-object)
       (mapcar #'texture-destroy texture-object)
