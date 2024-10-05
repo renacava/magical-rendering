@@ -3,12 +3,16 @@
 (defun font-find (font-filename)
   (probe-file (asdf:system-relative-pathname :magical-rendering (format nil "fonts/~a" font-filename))))
 
+(defun scan-fonts-folder ()
+  (files-of-type-in-directory (asdf:system-relative-pathname :magical-rendering "fonts/") "ttf"))
+
 (progn
   ;;(defparameter default-font-struct nil)
   (defparameter *strings-texture2d-table* (make-hash-table :test #'equalp))
   (defparameter *strings-sampler2d-table* (make-hash-table :test #'equalp))
   (defparameter *all-text-objects* (make-hash-table :test #'eq))
   (defparameter *default-font-filepath* (font-find "inconsolata-sugar-regular.ttf"))
+  (defparameter *fonts* (scan-fonts-folder))
   ;;(defparameter default-text-sampler nil)
  )
 (defun text-init ()
@@ -65,6 +69,9 @@
    (scale :initarg :scale
           :initform 1f0
           :accessor scale)
+   (colour :initarg :colour
+           :initform `(1.0 1.0 1.0 1.0)
+           :accessor colour)
    (z-order :initarg :z-order
             :initform 0f0
             :accessor z-order)
@@ -78,11 +85,12 @@
              :initform 0.5
              :accessor y-origin)))
 
-(defun text-make (text-string &key width height (loc (vec2 0.0 0.0)) (rot 0.0) (scale 1.0) (z-order 0.0) (visible t) (x-origin 0.5) (y-origin 0.5) (quality 'low) (font-filepath *default-font-filepath*))
+(defun text-make (text-string &key width height (loc (vec2 0.0 0.0)) (rot 0.0) (scale 1.0) (z-order 0.0) (visible t) (x-origin 0.5) (y-origin 0.5) (quality 'low) (font-filepath *default-font-filepath*) (colour `(1 1 1 1)))
   (let* ((text-obj (make-instance 'text-object
                                   :text-string text-string
                                   :quality quality
                                   :font-filepath font-filepath
+                                  :colour colour
                                   :loc loc
                                   :rot (lambda () (float (resolve rot)))
                                   :scale (lambda () (float (resolve scale)))
@@ -131,7 +139,8 @@
                            (float (resolve (y-origin text-object))))
              :width (float (window-width))     ;;(float (resolve (width text-object)))
              :height (/ (window-height) 4) ;;(float (resolve (height text-object)))
-             :sampler-2d (sampler2d-at-string (resolve (text-string text-object)) (resolve (quality text-object)) resolved-font-filepath)))
+             :sampler-2d (sampler2d-at-string (resolve (text-string text-object)) (resolve (quality text-object)) resolved-font-filepath)
+             :colour (ensure-colour (colour text-object))))
     ))
 
 (defun-g text-vert-stage ((vert :vec3) (uv :vec2) &uniform
@@ -161,8 +170,10 @@
             (vec4 vert 1.0)
             uv)))
 
-(defun-g text-frag-stage ((pos :vec4) (uv :vec2) &uniform (sampler-2d :sampler-2d))
-  (values (texture sampler-2d uv)))
+(defun-g text-frag-stage ((pos :vec4) (uv :vec2) &uniform (sampler-2d :sampler-2d) (colour :vec4))
+  (let* ((alpha (vec4 1.0 1.0 1.0 (aref (texture sampler-2d uv) 3)))
+         (final-colour (* alpha colour)))
+    (values final-colour)))
 
 (defpipeline-g text-pipeline ()
   (text-vert-stage :vec3 :vec2)
@@ -173,6 +184,11 @@
              (setf text-object nil))
            *all-text-objects*)
   (clrhash *all-text-objects*))
+
+(defun text-destroy (text-object)
+  (if (listp text-object)
+      (mapcar #'text-destroy text-object)
+      (remhash text-object *all-text-objects*)))
 
 (defun free-all-text-data ()
   (free-hashtable *strings-sampler2d-table*)
@@ -193,4 +209,103 @@
       (sdl2:free-surface texture-surface)
       text-texture)))
 
+(defun ensure-colour (value)
+  (let ((value (resolve value)))
+    (typecase value
+      (list (make-array 4 :element-type `single-float :initial-contents (mapcar #'float (right-pad value :desired-length 4 :padding 1.0))))
+      (array (let ((size (array-total-size value)))
+               (case size
+                 (0 (vec4 1.0 1.0 1.0 1.0))
+                 (1 (vec4 (float (aref value 0)) 1.0 1.0 1.0))
+                 (2 (vec4 (float (aref value 0)) (float (aref value 1)) 1.0 1.0))
+                 (3 (vec4 (float (aref value 0)) (float (aref value 1)) (float (aref value 2)) 1.0))
+                 (t value)))))))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; text property functions
+
+
+(defun text-size (text-object &key width height)
+  (when text-object
+    (if (or width height)
+        (progn
+          (when width
+            (setf (width text-object) width))
+          (when height
+            (setf (height text-object) height))
+          text-object)
+        (list (width text-object)
+              (height text-object)))))
+
+(defun text-translation (text-object &optional xy)
+  (when text-object
+    (if xy
+        (progn
+          (setf (loc text-object) xy)
+          text-object)
+        (loc text-object))))
+
+(defun text-colour (text-object &optional rgba)
+  (when text-object
+    (if rgba
+        (progn
+          (setf (colour text-object) rgba)
+          text-object)
+        (colour text-object))))
+
+(defun text-z (text-object &optional z-order)
+  (when text-object
+    (if z-order
+        (progn
+          (setf (z-order text-object) z-order)
+          text-object)
+        (z-order text-object))))
+
+(defun text-origin (text-object &key x-origin y-origin)
+  (when text-object
+    (if (or x-origin y-origin)
+        (progn
+          (when x-origin
+            (setf (x-origin text-object) x-origin))
+          (when y-origin
+            (setf (y-origin text-object) y-origin)))
+        (list (x-origin text-object)
+              (y-origin text-object)))))
+
+(defun text-rotate (text-object &optional rotation-in-degrees)
+  (when text-object
+    (if rotation-in-degrees
+        (progn
+          (setf (rot text-object) rotation-in-degrees)
+          text-object)
+        (rot text-object))))
+
+(defun text-scale (text-object &optional scale)
+  (when text-object
+    (if scale
+        (progn
+          (setf (scale text-object) scale)
+          text-object)
+        (scale text-object))))
+
+(defun text-font-path (text-object &optional font-path)
+  (when text-object
+    (if font-path
+        (progn
+          (setf (font-filepath text-object) font-path)
+          text-object)
+        (font-filepath text-object))))
+
+(defun text-properties (text-object)
+  (list :translation (loc text-object)
+        :rotation (rot text-object)
+        :scale (scale text-object)
+        :font-path (font-filepath text-object)
+        :width (width text-object)
+        :height (height text-object)
+        :z (z-order text-object)
+        :visible (visible text-object)
+        :colour (colour text-object)))
 

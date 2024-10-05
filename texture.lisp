@@ -2,7 +2,6 @@
 
 (defparameter ortho-matrix nil)
 (defparameter origin-matrix nil)
-(defparameter *current-screen-size* (vec2 1f0 1f0))
 (defparameter *all-texture-objects* (make-hash-table :test #'eq))
 (defparameter *paths-texture2d-table* (make-hash-table :test #'equal))
 (defparameter *paths-sampler2d-table* (make-hash-table :test #'equal))
@@ -96,11 +95,6 @@
              (setf texture-object nil))
            *all-texture-objects*)
   (clrhash *all-texture-objects*))
-
-(defun setup-ortho-matrix ()
-  (setf *current-screen-size* (cepl:surface-resolution (cepl:current-surface))
-        (resolution (current-viewport)) *current-screen-size* 
-        ortho-matrix (rtg-math.projection:orthographic-v2 *current-screen-size* 0.001 100.0)))
 
 (defun texture-set-visible (texture-object visibility)
   (when texture-object
@@ -295,8 +289,6 @@
 
 (defun window-height ()
   (aref *current-screen-size* 1))
-
-
 
 (defun texture-destroy (texture-object)
   (if (listp texture-object)

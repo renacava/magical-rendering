@@ -428,10 +428,21 @@ Eg: (get-element-before-branch '(1 2 6 2) '(1 2 4 9)) => 2"
 
 (defun files-in-directory (&optional (directory "./"))
   "Returns a list of the files in directory"
-  (directory (concatenate 'string directory
-			  (unless (eq #\/ (elt directory (1- (length directory))))
-			    "/")
-			  "*.*")))
+  (let ((directory (format nil "~a" directory)))
+    (directory (concatenate 'string directory
+                            (unless (eq #\/ (elt directory (1- (length directory))))
+                              "/")
+                            "*.*")))
+  )
+
+(defun files-of-type-in-directory (directory type)
+  (let* ((type (string-downcase (format nil "~a" type)))
+         (type (if (char= (char type 0) #\.)
+                   (subseq type 1)
+                   type)))
+    (remove-if-not (lambda (pathname) (string= (string-downcase (pathname-type pathname))
+                                               type))
+                   (files-in-directory directory))))
 
 (defun is-file? (pathname)
   "Returns t if given pathname points to a file, else nil."

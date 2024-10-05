@@ -11,6 +11,9 @@
    #:set-input-fps-cap
    #:set-idle-fps-cap
    #:window-get-size
+   #:window-center
+   #:window-width
+   #:window-height
    #:timeslice
    
    ;; sound
@@ -48,4 +51,17 @@
    #:texture-z
    #:texture-origin
    #:texture-properties
+
+   ;; text
+
+   #:text-make
+   #:text-destroy
+   #:text-size
+   #:text-translation
+   #:text-z
+   #:text-origin
+   #:text-rotate
+   #:text-scale
+   #:text-font-path
+   #:text-properties
    ))

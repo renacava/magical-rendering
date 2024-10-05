@@ -8,6 +8,7 @@
 (defparameter *render-fps* 180)
 (defparameter *input-fps* 180)
 (defparameter *bg-colour* `(0 0 0))
+(defparameter *current-screen-size* (vec2 1f0 1f0))
 
 (defun main (&key (window-name "Magical Window")
                   (width 800)
@@ -49,7 +50,24 @@
   (setup-keyboard)
   (sdl2-ttf:init)
   (text-init)
-  (defparameter title-text (text-make "Magical Rendering" :loc #'window-center :quality 'high :font-filepath (probe-file (asdf:system-relative-pathname :magical-rendering (font-find "inconsolata-sugar-bold-italic.ttf"))))))
+  (defparameter title-text (text-make "Magical Rendering" :loc #'window-center
+                                                          :quality 'high
+                                                          :font-filepath (let ((bold-italic (font-find "inconsolata-sugar-bold-italic.ttf"))
+                                                                               (bold (font-find "inconsolata-sugar-bold.ttf"))
+                                                                               (italic (font-find "inconsolata-sugar-italic.ttf"))
+                                                                               (regular (font-find "inconsolata-sugar-regular.ttf"))
+                                                                               (index 0))
+                                                                           (timeslice
+                                                                            (lambda () (elt (list bold-italic bold italic regular) (mod (incf index) 4)))
+                                                                            0.25))
+                                                          :colour (timeslice
+                                                                   (lambda () (let ((r (/ (getf *mouse* :x) (window-width)))
+                                                                                    (g (/ (getf *mouse* :y) (window-height)))
+                                                                                    (b (- 1.0 (/ (+ (/ (getf *mouse* :x) (window-width)) 
+                                                                                                    (/ (getf *mouse* :y) (window-height)))
+                                                                                                 2))))
+                                                                                (list r g b 1.0)))
+                                                                   (/ 1 30)))))
 
 (defun set-vsync-enabled (bool)
   (setf (cepl.sdl2::vsync) bool))
@@ -103,3 +121,8 @@
 
 (defun set-input-fps-cap (amount)
   (setf *input-fps* (or (valid-fps? amount) *input-fps*)))
+
+(defun setup-ortho-matrix ()
+  (setf *current-screen-size* (cepl:surface-resolution (cepl:current-surface))
+        (resolution (current-viewport)) *current-screen-size* 
+        ortho-matrix (rtg-math.projection:orthographic-v2 *current-screen-size* 0.001 100.0)))
