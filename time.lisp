@@ -31,13 +31,12 @@
     (lambda (&rest args)
       (let ((new-time (get-internal-real-time)))
         (if (>= (- new-time prior-time) (* (resolve min-time-between-calls) internal-time-units-per-second))
-            
             (setf prior-result (apply func args)
                   prior-time new-time)
             (let ((resolved-sleep-time (resolve sleep-time)))
-              (when (numberp resolved-sleep-time)
-                (when sleep-time
-                  (sleep resolved-sleep-time))))))
+              (when (and (numberp resolved-sleep-time)
+                         (plusp resolved-sleep-time))
+                (sleep resolved-sleep-time)))))
       prior-result)))
 
 (defun timeslice-fps (func max-fps &optional sleep-time)
